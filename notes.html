@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes</title>
+<style>
+body { color: white; font-family: sans-serif; }
+.menu { z-index: 10; } /* keeps the dropdown above the page so its links are clickable */
+.wrap { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.box { background: rgba(55, 55, 55, 0.75); border: 1px solid aqua; border-radius: 12px; padding: 14px; }
+#side { flex: 1; min-width: 220px; }
+#editor { flex: 3; min-width: 300px; display: flex; flex-direction: column; gap: 10px; }
+button { background: none; color: white; border: 1px solid transparent; border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button:hover { background: rgba(128, 128, 128, 0.15); border-color: aqua; }
+input, textarea { background: #1a1a1a; color: white; border: 1px solid gray; border-radius: 8px; padding: 8px; width: 100%; box-sizing: border-box; font-family: inherit; font-size: 1rem; }
+input:focus, textarea:focus { outline: none; border-color: aqua; }
+#title { font-size: 1.3rem; font-weight: bold; }
+textarea { height: 55vh; resize: vertical; }
+ul { padding: 0; margin: 10px 0 0; }
+li { list-style: none; padding: 8px; margin-top: 6px; border-radius: 8px; border-left: 3px solid gray; background: rgba(255, 255, 255, 0.06); cursor: pointer; }
+li:hover { background: rgba(128, 128, 128, 0.15); }
+li.selected { border-left-color: aqua; background: rgba(0, 255, 255, 0.15); }
+li small { display: block; color: gray; }
+#empty { color: gray; }
+</style>
+</head>
+<body>
+<h1 style="font-family: 'Dactalfont', sans-serif;">Daxal</h1>
+<details class="menu">
+  <summary>☰</summary>
+  <nav>
+    <a href="home.html">Home</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="notes.html">Notes</a>
+    <a href="../index.html">go back</a>
+  </nav>
+</details>
+
+<link rel="stylesheet" href="../style.css">
+
+<div class="wrap">
+  <div id="side" class="box">
+    <button onclick="newNote()" style="border-color: aqua; color: aqua;">+ New note</button>
+    <input id="search" placeholder="Search notes" oninput="drawList()" style="margin-top: 10px;">
+    <ul id="list"></ul>
+  </div>
+  <div id="editor" class="box">
+    <p id="empty">No note open. Make a new one to start.</p>
+    <div id="fields" style="display: none;">
+      <input id="title" placeholder="Title" oninput="edit()">
+      <textarea id="text" placeholder="Start writing..." oninput="edit()" style="margin-top: 10px;"></textarea>
+      <button onclick="del()" style="margin-top: 10px;">Delete note</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// notes look like: [ { id: 123, title: "Shopping", text: "milk, eggs", time: 123 } ]
+var notes = JSON.parse(localStorage.getItem("notes") || "[]");
+var current = notes.length ? notes[0].id : null;
+
+function save() { localStorage.setItem("notes", JSON.stringify(notes)); }
+function find(id) { for (var i = 0; i < notes.length; i++) if (notes[i].id == id) return notes[i]; }
+
+function drawList() {
+  var search = document.getElementById("search").value.toLowerCase();
+  var html = "";
+  for (var i = 0; i < notes.length; i++) {
+    var n = notes[i];
+    if ((n.title + n.text).toLowerCase().indexOf(search) == -1) continue;
+    var cls = n.id == current ? "selected" : "";
+    var title = (n.title || "Untitled").replace(/</g, "&lt;");
+    var preview = n.text.slice(0, 40).replace(/</g, "&lt;");
+    html += "<li class='" + cls + "' onclick='openNote(" + n.id + ")'>" + title + "<small>" + preview + "</small></li>";
+  }
+  document.getElementById("list").innerHTML = html;
+}
+
+function openNote(id) {
+  current = id;
+  var n = find(id);
+  document.getElementById("empty").style.display = n ? "none" : "block";
+  document.getElementById("fields").style.display = n ? "block" : "none";
+  if (n) {
+    document.getElementById("title").value = n.title;
+    document.getElementById("text").value = n.text;
+  }
+  drawList();
+}
+
+function newNote() {
+  var n = { id: Date.now(), title: "", text: "" };
+  notes.unshift(n);
+  save();
+  openNote(n.id);
+  document.getElementById("title").focus();
+}
+
+function edit() {
+  var n = find(current);
+  n.title = document.getElementById("title").value;
+  n.text = document.getElementById("text").value;
+  save();
+  drawList();
+}
+
+function del() {
+  if (!confirm("Delete this note?")) return;
+  notes = notes.filter(function (n) { return n.id != current; });
+  save();
+  openNote(notes.length ? notes[0].id : null);
+}
+
+openNote(current);
+</script>
+</body>
+</html>
